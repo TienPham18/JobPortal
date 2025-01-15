@@ -7,6 +7,7 @@ import com.luv2code.jobportal.repository.JobSeekerProfileRepository;
 import com.luv2code.jobportal.repository.RecruiterProfileRepository;
 import com.luv2code.jobportal.repository.UsersRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
@@ -19,19 +20,25 @@ public class UsersService {
     private final JobSeekerProfileRepository jobSeekerProfileRepository;
     private final RecruiterProfileRepository recruiterProfileRepository;
 
+    private final PasswordEncoder passwordEncoder;
+
     // Constructor injection
     @Autowired
     public UsersService(UsersRepository theUsersRepository,
                         JobSeekerProfileRepository theJobSeekerProfileRepository,
-                        RecruiterProfileRepository theRecruiterProfileRepository) {
+                        RecruiterProfileRepository theRecruiterProfileRepository,
+                        PasswordEncoder thePasswordEncoder) {
         this.usersRepository = theUsersRepository;
         this.jobSeekerProfileRepository = theJobSeekerProfileRepository;
         this.recruiterProfileRepository = theRecruiterProfileRepository;
+        this.passwordEncoder = thePasswordEncoder;
     }
 
     public Users addNew(Users theUsers) {
         theUsers.setActive(true);
         theUsers.setRegistrationDate(new Date(System.currentTimeMillis()));
+        theUsers.setPassword(passwordEncoder.encode(theUsers.getPassword()));
+
         // really important we need to save it first before we pass it into those other methods (refactoring from the below return)
         Users savedUser = usersRepository.save(theUsers);
 
