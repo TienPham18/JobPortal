@@ -72,13 +72,14 @@ public class RecruiterProfileController {
         model.addAttribute("profile", recruiterProfile);
 
         String fileName = "";
+
         if (!multipartFile.getOriginalFilename().equals(" ")) {
             fileName = StringUtils.cleanPath(Objects.requireNonNull(multipartFile.getOriginalFilename()));
             recruiterProfile.setProfilePhoto(fileName);
         }
         RecruiterProfile savedUser = recruiterProfileService.addNew(recruiterProfile);
 
-        String uploadDir = "photo/recruiter/" + savedUser.getUserAccountId();
+        String uploadDir = "photos/recruiter/" + savedUser.getUserAccountId();
 
         try {
             FileUploadUtil.saveFile(uploadDir, fileName, multipartFile);

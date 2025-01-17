@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 import java.util.List;
 
 @Entity
-@Table(name="Job_seeker_profile")
+@Table(name="job_seeker_profile")
 public class JobSeekerProfile {
 
     @Id
@@ -151,9 +151,12 @@ public class JobSeekerProfile {
 
     @Transient
     public String getPhotosImagePath() {
-        if (profilePhoto != null || userAccountId == null) return null; {
+        if (profilePhoto == null) return null;  {
             return "/photos/candidate/"+userAccountId+"/"+profilePhoto;
         }
+
+        //if (profilePhoto == null || userAccountId == null) return null;
+        //return "/photos/candidate/"+userAccountId+"/"+profilePhoto;
     }
 
     @Override
