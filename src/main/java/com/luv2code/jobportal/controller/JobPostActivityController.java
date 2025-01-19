@@ -13,10 +13,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.util.StringUtils;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.Arrays;
@@ -176,6 +173,88 @@ public class JobPostActivityController {
         model.addAttribute("user", currentUserProfile);
 
         return "dashboard";
+    }
+
+    @RequestMapping("global-search/")
+    public String globalSearch(Model model,
+                               @RequestParam(value = "job", required = false) String job,
+                               @RequestParam(value = "location", required = false) String location,
+                               @RequestParam(value = "partTime", required = false) String partTime,
+                               @RequestParam(value = "fullTime", required = false) String fullTime,
+                               @RequestParam(value = "freelance", required = false) String freelance,
+                               @RequestParam(value = "remoteOnly", required = false) String remoteOnly,
+                               @RequestParam(value = "officeOnly", required = false) String officeOnly,
+                               @RequestParam(value = "partialRemote", required = false) String partialRemote,
+                               @RequestParam(value = "today", required = false) boolean today,
+                               @RequestParam(value = "days7", required = false) boolean days7,
+                               @RequestParam(value = "days30", required = false) boolean days30) {
+        // search criteria what we need to search for accordingly
+        model.addAttribute("partTime", Objects.equals(partTime, "Part-Time"));
+        model.addAttribute("fullTime", Objects.equals(fullTime, "Full-Time"));
+        model.addAttribute("freelance", Objects.equals(freelance, "Freelance"));
+
+        model.addAttribute("remoteOnly", Objects.equals(remoteOnly, "Remote-Only"));
+        model.addAttribute("officeOnly", Objects.equals(officeOnly, "Office-Only"));
+        model.addAttribute("partialRemote", Objects.equals(partialRemote, "Partial-Remote"));
+
+        model.addAttribute("today", today);
+        model.addAttribute("day7", days7);
+        model.addAttribute("day30", days30);
+
+        model.addAttribute("job", job);
+        model.addAttribute("location", location);
+
+        // set up Boolean flags to search by date, remote or type of job accordingly.
+        LocalDate searchDate = null;
+        List<JobPostActivity> jobPost = null;
+        boolean dateSearchFlag = true;
+        boolean remote = true;
+        boolean type = true;
+
+        // handle the number of days or figure out the number of days, which is used for search date
+
+        if (days30) {
+            searchDate = LocalDate.now().minusDays(30);
+        } else if (days7) {
+            searchDate = LocalDate.now().minusDays(7);
+        } else if (today) {
+            searchDate = LocalDate.now();
+        } else {
+            dateSearchFlag = false;
+        }
+
+        // some logic in case these values did not come in, we'll set in the appropriate defaults accordingly
+        if (partTime == null && fullTime == null && freelance == null) {
+            partTime = "Part-Time";
+            fullTime = "Full-Time";
+            freelance = "Freelance";
+            remote = false;
+        }
+
+        if (officeOnly == null && remoteOnly == null && partialRemote == null) {
+            officeOnly = "Office-Only";
+            remoteOnly = "Remote-Only";
+            partialRemote = "Partial-Remote";
+            type = false;
+        }
+
+        /*
+        some logic to check for the date search
+        1. if no items selected, then we simply get all jobs
+        2. if any of the flags are selected, then we'll search using those appropriate flags.
+         */
+
+        if (!dateSearchFlag && !remote && !type && !StringUtils.hasText(job) && !StringUtils.hasText(location)) {
+            jobPost = jobPostActivityService.getAll();
+        } else {
+            jobPost = jobPostActivityService.search(job, location, Arrays.asList(partTime, fullTime, freelance),
+                    Arrays.asList(remoteOnly, officeOnly, partialRemote), searchDate);
+        }
+
+        // add JobPost to the model
+        model.addAttribute("jobPost", jobPost);
+
+        return "global-search";
     }
 
     @GetMapping("/dashboard/add")
