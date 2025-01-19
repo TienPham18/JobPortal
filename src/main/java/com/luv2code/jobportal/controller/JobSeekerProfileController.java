@@ -5,8 +5,14 @@ import com.luv2code.jobportal.entitiy.Skills;
 import com.luv2code.jobportal.entitiy.Users;
 import com.luv2code.jobportal.repository.UsersRepository;
 import com.luv2code.jobportal.services.JobSeekerProfileService;
+import com.luv2code.jobportal.util.FileDownloadUtil;
 import com.luv2code.jobportal.util.FileUploadUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -14,10 +20,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.util.StringUtils;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -72,7 +75,7 @@ public class JobSeekerProfileController {
         return "job-seeker-profile";
     }
 
-    // When this form submissio happends, we have some data that's passed in. we will get the job-seeker profile.
+    // When this form submission happens, we have some data that's passed in. we will get the job-seeker profile.
     @PostMapping("/addNew")
     public String addNew(JobSeekerProfile jobSeekerProfile,
                          @RequestParam("image") MultipartFile image,
@@ -136,5 +139,60 @@ public class JobSeekerProfileController {
         }
 
         return "redirect:/dashboard/";
+    }
+
+    /*
+     method to add "a request mapping" to "job-seeker-profile/{id} in job-details.html
+     - show the profile or retrieve the profile for a given candidate ID
+     - just buying the ID and pass in the model
+     */
+    @GetMapping("/{id}")
+    public String candidateProfile(@PathVariable("id") int id, Model model) {
+        // use the JobSeekerProfileService to retrieve that profile
+        Optional<JobSeekerProfile> seekerProfile = jobSeekerProfileService.getOne(id);
+        // add it to the model as an attribute with the name of profile
+        model.addAttribute("profile", seekerProfile.get());
+
+        return "job-seeker-profile"; // return to file "job-seeker-profile.html"
+    }
+
+    // set up the get mapping download resume
+    @GetMapping("/downloadResume")
+    public ResponseEntity<?> downloadResume(@RequestParam(value = "fileName") String fileName,
+                                            @RequestParam(value = "userID") String userId) {
+        // pass in the request params for the file name and actual id
+
+        // make sure of the "FileDownloadUtil" class is used. simply give the download directory and file name.
+        FileDownloadUtil fileDownloadUtil = new FileDownloadUtil();
+        Resource resource = null;
+
+        try {
+            resource = fileDownloadUtil.getFileAsResource(("photos/candidate/") + userId, fileName);
+        } catch (IOException io) {
+            return  ResponseEntity.badRequest().build();
+        }
+
+        // if the resource is null, that means we did not find it
+        if (resource == null) {
+            return new ResponseEntity<>("File not found", HttpStatus.NOT_FOUND);
+        }
+
+        /*
+        set up the content type and the actual header value, because we're going to send back a file to download
+        - so we set that accordingly with the content type of application octet stream
+        - that way our browser will know that we're sending over a binary file or a stream of binary or octets.
+        - then we give the name of that file that we're passing over as far as that download.
+         */
+        String contentType = "application/octet-stream";
+        String headerValue = "attachment; filename=\"" + resource.getFilename() + "\"";
+
+        // return a response with content type headers and then actual resource.
+        return ResponseEntity.ok().contentType(MediaType.parseMediaType(contentType))
+                /*
+                that resource is the actual contents of the file, and that will be in the response body.
+                - the browser will get that whole stream of binary data and use it accordingly, or save it to your local computer
+                 */
+                .header(HttpHeaders.CONTENT_DISPOSITION, headerValue)
+                .body(resource);
     }
 }
